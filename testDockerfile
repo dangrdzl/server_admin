@@ -1,0 +1,35 @@
+# Dockerfile to build ownCloud container images
+# Based on Ubuntu
+############################################################
+
+# Set the base image to Ubuntu
+
+
+###########INSTALLING MYSQL
+
+FROM ubuntu:14.04.4
+RUN apt-get update && apt-get install wget gcc libpcre3 make libssl-dev libpcre3-dev gzip zlibc zlib1g zlib1g-dev php5-fpm=5.5.9+dfsg-1ubuntu4.14 mysql-server=5.5.47-0ubuntu0.14.04.1 php5=5.5.9+dfsg-1ubuntu4.14 php5-mysql php5-gd php5-curl supervisor -yqq
+WORKDIR /root/nginx
+RUN mkdir -p /var/log/supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN wget http://nginx.org/download/nginx-1.7.9.tar.gz
+RUN tar zxvf nginx-1.7.9.tar.gz
+WORKDIR /root/nginx/nginx-1.7.9
+RUN ./configure --sbin-path=/usr/local/sbin --with-http_ssl_module && make && make install
+#RUN /usr/sbin/mysqld & \
+#    sleep 10s &&\
+#    echo "GRANT ALL ON *.* TO test@'%' IDENTIFIED BY 'test1' WITH GRANT OPTION; FLUSH PRIVILEGES;" | mysql &&\
+#    echo "create database ownclouddb" | mysql
+ADD nginx.conf /usr/local/nginx/conf/nginx.conf
+RUN sed -i -e's/^;daemonize = yes/daemonize = no;/' /etc/php5/fpm/php-fpm.conf
+WORKDIR /home/owncloud/
+RUN apt-get install -y unzip
+RUN wget https://download.owncloud.org/community/owncloud-8.2.2.zip
+RUN unzip owncloud-8.2.2.zip
+RUN chown -R www-data:www-data owncloud/
+COPY autoconfig.php /home/owncloud/owncloud/config/autoconfig.php
+
+EXPOSE 80 3306
+CMD ["/usr/bin/supervisord"]
+
+################### INSTALLATION END #######################
